@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Popup preview</title>
+<script>
+  // Opens popup.html with a chrome.* stub. The popup has a single light pastel theme.
+  window.chrome = {
+    tabs: { query(_q, cb) { cb([{ url: 'https://funpay.com/chat/?node=1' }]); } },
+    storage: {
+      sync: { _d: {}, get(d, cb) { cb(Object.assign({}, d, this._d)); }, set(o, cb) { Object.assign(this._d, o); cb && cb(); } },
+      local: { _d: { learnedNames: ['koryangelo', 'tekrocan'] }, get(d, cb) { cb(Object.assign({}, d, this._d)); }, set(o, cb) { Object.assign(this._d, o); cb && cb(); } },
+    },
+  };
+  fetch('../../popup.html?v=' + Date.now()).then(r => r.text()).then(html => {
+    html = html.replace('src="icons/', 'src="../../icons/').replace('src="src/field.js"', 'src="../../src/field.js"').replace('src="flags.js"', 'src="../../flags.js?v=' + Date.now() + '"').replace('src="popup.js"', 'src="../../popup.js?v=' + Date.now() + '"');
+    document.open(); document.write(html); document.close();
+  });
+</script>

@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TypeKiwi</title>
+<style>
+  /* Kiwi palette: skin #B89A61, light flesh #A9C77E, flesh #61AB5A, core #F2ECAE, seed #563429.
+     Seed-brown header, kiwi-green language card, cream background and cards, brown text instead of black.
+     One theme on purpose; it ignores the browser's dark mode. */
+  :root {
+    --ink: #563429;             /* seed brown */
+    --paper: #fbf9ea;           /* whitish cream background */
+    --card: #f4efcf;            /* cream cards (core #F2ECAE, softened) */
+    --line: #e2d8a8;
+    --muted: #86704a;           /* darkened skin tan, readable on cream */
+    --accent: #3f8a3b;          /* kiwi green, darkened for text on cream */
+    --accent-soft: rgba(97, 171, 90, 0.18);
+    --toggle-on: #61ab5a;       /* kiwi flesh */
+    --coral: #b5523f;
+    --bark: #563429;            /* header: seed brown */
+    --bark-2: #6c4536;
+    --forest: #468c41;          /* language card: kiwi green */
+    --forest-2: #61ab5a;
+    --on-forest: #fbf8e6;       /* cream text on the dark areas */
+    --on-forest-muted: #e3ecc6;
+    --kiwi: #f2ecae;            /* kiwi core cream: highlight on green */
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    width: 312px;
+    background: var(--paper);
+    color: var(--ink);
+    font: 13px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    background: linear-gradient(180deg, var(--bark-2), var(--bark));
+    color: var(--on-forest);
+  }
+  header img { width: 30px; height: 30px; }
+  header h1 {
+    margin: 0;
+    font: 600 15px/1 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+  header .site { margin-left: auto; color: #d9c7a3; font-size: 11.5px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Language pair: the popup's one bold element */
+  .pair {
+    margin: 0 12px;
+    padding: 16px 10px 12px;
+    background: linear-gradient(160deg, var(--forest-2), var(--forest));
+    color: var(--on-forest);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(70, 60, 30, 0.22);
+    display: grid;
+    grid-template-columns: 1fr 28px 1fr;
+    align-items: center;
+  }
+  .lang { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; text-align: center; position: relative; }
+  .lang .cap { font-size: 11px; color: var(--on-forest-muted); line-height: 1.2; }
+  .lang .code {
+    font: 650 30px/1 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+  .lang.to .code { color: var(--kiwi); }
+  .arrow { color: var(--on-forest-muted); font-size: 18px; text-align: center; }
+  .pair-note {
+    grid-column: 1 / -1;
+    margin: 14px 4px 0;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--on-forest-muted);
+    text-align: center;
+  }
+  .pair-note b { color: var(--on-forest); font-weight: 600; }
+
+  /* Language picker with flags */
+  .flag { width: 20px; height: 14px; border-radius: 2px; flex: none; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12); }
+  .langbtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    max-width: 100%;
+    padding: 5px 8px 5px 7px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.10);
+    color: var(--on-forest);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  .langbtn:hover { border-color: rgba(255, 255, 255, 0.45); }
+  .langbtn:focus-visible { outline: 2px solid var(--kiwi); outline-offset: 2px; }
+  .langbtn .chev { width: 10px; height: 6px; flex: none; color: var(--on-forest-muted); }
+  .menu {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    margin-top: 4px;
+    width: 168px;
+    max-height: 236px;
+    overflow-y: auto;
+    padding: 4px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 10px 28px rgba(86, 52, 41, 0.16);
+    text-align: left;
+  }
+  .menu[hidden] { display: none; }
+  .menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .menu button:hover, .menu button:focus-visible { background: var(--accent-soft); outline: none; }
+  .menu button[aria-selected="true"] { font-weight: 600; color: var(--accent); }
+
+  /* Toggle rows */
+  .rows { margin: 12px 12px 0; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 3px rgba(86, 52, 41, 0.06); }
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row label { flex: 1; cursor: pointer; }
+  .row .sub { display: block; color: var(--muted); font-size: 11px; }
+  .row[hidden] { display: none; }
+  .pack { flex: none; padding: 7px 11px; border: 0; border-radius: 8px; background: var(--toggle-on); color: #fff; font-family: inherit; font-size: 12px; font-weight: 600; line-height: 1; cursor: pointer; }
+  .pack:hover { filter: brightness(0.95); }
+  .pack:disabled { opacity: 0.7; cursor: default; }
+  .pack[hidden] { display: none; }
+  input[type="checkbox"] {
+    appearance: none;
+    flex: none;
+    width: 34px; height: 20px;
+    margin: 0;
+    border-radius: 999px;
+    background: var(--line);
+    position: relative;
+    cursor: pointer;
+  }
+  /* Don't slide on open; animate only when the user toggles. */
+  body.ready input[type="checkbox"] { transition: background 0.15s; }
+  body.ready input[type="checkbox"]::after { transition: transform 0.15s; }
+  input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(86, 52, 41, 0.25);
+  }
+  input[type="checkbox"]:checked { background: var(--toggle-on); }
+  input[type="checkbox"]:checked::after { transform: translateX(14px); }
+  input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Protected names */
+  .names { margin: 12px 12px 0; }
+  .names label { display: block; font-weight: 600; font-size: 12px; margin: 0 2px 6px; }
+  .names textarea {
+    width: 100%;
+    height: 56px;
+    resize: vertical;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--card);
+    color: var(--ink);
+    font: inherit;
+    font-size: 12.5px;
+  }
+  .names textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+  .hint { color: var(--muted); font-size: 11px; margin: 5px 2px 0; }
+  .learned { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin: 8px 2px 0; }
+  .chip { background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 2px 9px; font-size: 11.5px; font-weight: 500; }
+  .learned button {
+    margin-left: auto;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .learned button:hover { color: var(--coral); }
+  .learned[hidden] { display: none; }
+
+  footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 14px 16px 12px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  kbd {
+    font: 600 10px/1 "Segoe UI", system-ui, sans-serif;
+    padding: 2px 5px;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+  #saved { color: var(--accent); font-weight: 600; opacity: 0; transition: opacity 0.2s; }
+  #saved.on { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <img src="icons/logo.png" alt="">
+  <h1>TypeKiwi</h1>
+  <span class="site" id="siteName"></span>
+</header>
+
+<section class="pair" aria-label="Languages">
+  <div class="lang">
+    <span class="cap">Their messages</span>
+    <span class="code" id="readCode">TR</span>
+    <div class="picker" data-for="readLang"></div>
+    <select id="readLang" hidden aria-label="Language to translate their messages into"></select>
+  </div>
+  <span class="arrow" aria-hidden="true">⇄</span>
+  <div class="lang to">
+    <span class="cap">What I write</span>
+    <span class="code" id="targetCode">RU</span>
+    <div class="picker" data-for="targetLang"></div>
+    <select id="targetLang" hidden aria-label="Language to translate what I write into"></select>
+  </div>
+  <p class="pair-note" id="pairNote"></p>
+</section>
+
+<section class="rows">
+  <div class="row" id="siteRow" hidden>
+    <label for="siteOn">Run on this site<span class="sub" id="siteSub"></span></label>
+    <input type="checkbox" id="siteOn">
+  </div>
+  <div class="row">
+    <label for="enabled">Translate as I type<span class="sub">The box is translated a second after you stop typing</span></label>
+    <input type="checkbox" id="enabled">
+  </div>
+  <div class="row">
+    <label for="incoming">Translate incoming messages<span class="sub">Translation appears below the message</span></label>
+    <input type="checkbox" id="incoming">
+  </div>
+  <div class="row" id="offlineRow" hidden>
+    <label>Offline translation<span class="sub" id="offlineSub"></span></label>
+    <button type="button" class="pack" id="offlineBtn" hidden>Download</button>
+  </div>
+</section>
+
+<section class="names">
+  <label for="keepList">Names to keep as-is</label>
+  <textarea id="keepList" placeholder="e.g. alex_92, Mira"></textarea>
+  <div class="hint">Separate with commas. Usernames and Turkish names are kept automatically.</div>
+  <div class="learned" id="learnedRow" hidden>
+    <span id="learned"></span>
+    <button id="clearLearned" type="button">Clear learned</button>
+  </div>
+</section>
+
+<footer>
+  <span><kbd>Enter</kbd> send &nbsp; <kbd>Esc</kbd> skip this message</span>
+  <span id="saved">Saved</span>
+</footer>
+
+<script src="src/field.js"></script>
+<script src="flags.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

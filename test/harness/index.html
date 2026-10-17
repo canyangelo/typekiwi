@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>TypeKiwi: FunPay chat mock</title>
+<link rel="stylesheet" href="../../src/content.css">
+<style>
+  body { font: 14px system-ui, sans-serif; max-width: 640px; margin: 20px auto; background: #fff; }
+  .chat-msg-item { padding: 6px 0; border-bottom: 1px solid #eee; }
+  textarea { width: 100%; height: 60px; }
+  #sent { background: #f6f6f6; padding: 6px; min-height: 20px; }
+</style>
+</head>
+<body data-app-data='{"userId":1234567}'>
+<div class="chat-header"><div class="media-user-name"><a href="https://funpay.com/users/7654321/">ivan_buyer</a></div></div>
+<div class="chat-message-list">
+  <div class="chat-msg-item chat-msg-with-head"><div class="chat-message"><div class="media-user-name">
+    <a href="https://funpay.com/users/7654321/" class="chat-msg-author-link">ivan_buyer</a></div>
+    <div class="chat-msg-text">Привет, я оплатил заказ, когда отправишь предмет?</div></div></div>
+  <div class="chat-msg-item"><div class="chat-message"><div class="chat-msg-text">Мой ник в игре ivan_buyer</div></div></div>
+  <div class="chat-msg-item chat-msg-with-head"><div class="chat-message"><div class="media-user-name">FunPay
+    <span class="chat-msg-author-label label">оповещение</span></div>
+    <div class="chat-msg-text">Покупатель NovaSeller подтвердил успешное выполнение заказа</div></div></div>
+  <div class="chat-msg-item chat-msg-with-head"><div class="chat-message"><div class="media-user-name">
+    <a href="https://funpay.com/users/1234567/" class="chat-msg-author-link">NovaSeller</a></div>
+    <div class="chat-msg-text">Спасибо</div></div></div>
+</div>
+<form>
+  <div class="chat-form-input"><div class="form-group"><textarea name="content" class="form-control"></textarea></div></div>
+  <div class="chat-form-btn"><button type="button" class="chat-btn-image">img</button><button type="submit">→</button></div>
+</form>
+<p>Sent:</p>
+<div id="sent"></div>
+<script>
+  // Like FunPay: Enter sends, and sending clears the field.
+  const ta = document.querySelector('textarea');
+  const sentLog = [];
+  window.__sent = sentLog;
+  function fpSend() { if (!ta.value.trim()) return; sentLog.push(ta.value); document.getElementById('sent').textContent = sentLog.join(' || '); ta.value = ''; }
+  document.addEventListener('keydown', e => { if (e.target === ta && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); fpSend(); } });
+  document.querySelector('form').addEventListener('submit', e => { e.preventDefault(); fpSend(); });
+  // A message that arrives later (MutationObserver test)
+  window.addIncoming = (text) => {
+    const d = document.createElement('div');
+    d.className = 'chat-msg-item chat-msg-with-head';
+    d.innerHTML = '<div class="chat-message"><div class="media-user-name"><a href="https://funpay.com/users/7654321/" class="chat-msg-author-link">ivan_buyer</a></div><div class="chat-msg-text"></div></div>';
+    d.querySelector('.chat-msg-text').textContent = text;
+    document.querySelector('.chat-message-list').append(d);
+  };
+</script>
+<script>
+  window.__ccFunpay = true; // make the content script treat this page as FunPay
+  // Each script is loaded in order with a timestamp to bypass the cache.
+  const v = Date.now();
+  for (const src of ['chrome-shim.js', '../../src/protect.js', '../../src/diff.js', '../../src/names.js', '../../src/field.js', '../../src/tr-names.js', '../../src/slang.js', '../../flags.js', '../../src/content.js']) {
+    document.write('<script src="' + src + '?v=' + v + '"><\/script>');
+  }
+  document.write('<link rel="stylesheet" href="../../src/content.css?v=' + v + '">');
+</script>
+</body>
+</html>

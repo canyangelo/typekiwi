@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>TypeKiwi: generic site mock (contenteditable)</title>
+<style>
+  body { font: 14px system-ui, sans-serif; max-width: 680px; margin: 20px auto; background: #313338; color: #dbdee1; }
+  h2 { font-size: 13px; margin: 28px 0 6px; color: #b5bac1; }
+  .box { background: #383a40; border-radius: 8px; padding: 10px 12px; min-height: 20px; outline: none; }
+  textarea, input { width: 100%; box-sizing: border-box; font: inherit; background: #383a40; color: inherit; border: 0; border-radius: 8px; padding: 8px; }
+  .log { background: #2b2d31; padding: 6px; min-height: 18px; font-size: 12px; white-space: pre-wrap; }
+  .ph { opacity: .5; pointer-events: none; user-select: none; }
+  .spacer { height: 200px; }
+</style>
+</head>
+<body>
+<div class="spacer"></div>
+
+<h2>1. Plain contenteditable (like Telegram): Enter sends</h2>
+<div id="tg" class="box input-message-input" contenteditable="true"></div>
+<div id="tgLog" class="log"></div>
+
+<h2>2. Slate mock (like Discord): handles beforeinput/paste itself, renders on the next frame, Enter sends</h2>
+<div id="slate" class="box" contenteditable="true" role="textbox" aria-label="Message #genel" data-slate-editor="true"></div>
+<div id="slateLog" class="log"></div>
+
+<h2>3. Editor that rejects programmatic writes (no method sticks)</h2>
+<div id="stubborn" class="box" contenteditable="true" aria-label="Comment"></div>
+<div id="stubbornLog" class="log"></div>
+
+<h2>4. Plain textarea (Enter is a line break, no sending)</h2>
+<textarea id="plain" rows="3"></textarea>
+
+<h2>5. Fields that must not be translated</h2>
+<input id="search" type="search" placeholder="Search">
+<input id="search2" type="text" placeholder="Sohbetlerde ara">
+<input id="pw" type="password">
+<input id="mail" type="text" autocomplete="email">
+<div id="dsearch" class="box" contenteditable="true" role="combobox" aria-label="Search"></div>
+
+<script>
+  window.__sent = { tg: [], slate: [], stubborn: [] };
+  const log = (id) => { document.getElementById(id + 'Log').textContent = window.__sent[id].join(' || '); };
+
+  // 1. Like Telegram
+  const tg = document.getElementById('tg');
+  tg.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const t = tg.innerText.trim();
+      if (!t) return;
+      window.__sent.tg.push(t); log('tg');
+      tg.innerHTML = '';
+    }
+  });
+
+  // 2. Like Slate: the model is separate from the DOM, changes render on the next frame; when empty it holds a placeholder.
+  const slate = document.getElementById('slate');
+  let model = '';
+  function render() {
+    slate.innerHTML = '';
+    const block = document.createElement('div');
+    block.setAttribute('data-slate-node', 'element');
+    const leaf = document.createElement('span');
+    leaf.setAttribute('data-slate-leaf', 'true');
+    if (!model) {
+      const ph = document.createElement('span');
+      ph.className = 'ph'; ph.contentEditable = 'false'; ph.setAttribute('data-slate-placeholder', 'true');
+      ph.textContent = 'Message #genel';
+      const zw = document.createElement('span');
+      zw.setAttribute('data-slate-zero-width', 'n'); zw.textContent = '﻿';
+      leaf.append(ph, zw);
+    } else {
+      const t = document.createElement('span'); t.setAttribute('data-slate-string', 'true'); t.textContent = model;
+      leaf.append(t);
+    }
+    block.append(leaf); slate.append(block);
+    // put the caret at the end
+    const r = document.createRange(); r.selectNodeContents(slate); r.collapse(false);
+    const s = getSelection(); if (slate.contains(s.anchorNode) || document.activeElement === slate) { s.removeAllRanges(); s.addRange(r); }
+  }
+  // Like Slate: reads the selection not from the DOM immediately but via selectionchange, ~100 ms late.
+  let selAll = false;
+  document.addEventListener('selectionchange', () => setTimeout(() => {
+    const s = getSelection(); selAll = !!model && s.rangeCount > 0 && s.toString().length >= model.length;
+  }, 100));
+  const allSelected = () => selAll;
+  function apply(fn) { fn(); selAll = false; setTimeout(render, 16); slate.dispatchEvent(new Event('input', { bubbles: true })); }
+  slate.addEventListener('beforeinput', e => {
+    e.preventDefault();
+    if (e.inputType === 'insertText') apply(() => { model = allSelected() ? e.data : model + e.data; });
+    else if (e.inputType === 'deleteContentBackward') apply(() => { model = allSelected() ? '' : model.slice(0, -1); });
+  });
+  slate.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    apply(() => { model = allSelected() ? text : model + text; });
+  });
+  slate.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!model.trim()) return;
+      window.__sent.slate.push(model); log('slate');
+      model = ''; setTimeout(render, 16);
+    }
+  });
+  render();
+
+  // 3. Stubborn: blocks every input by its own rules, only allows text typed with real keys.
+  const stubborn = document.getElementById('stubborn');
+  stubborn.addEventListener('beforeinput', e => { if (!e.isTrusted || e.inputType !== 'insertText' || (e.data || '').length > 1) e.preventDefault(); });
+  stubborn.addEventListener('paste', e => e.preventDefault());
+  stubborn.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const t = stubborn.innerText.trim();
+      if (!t) return;
+      window.__sent.stubborn.push(t); log('stubborn');
+      stubborn.innerHTML = '';
+    }
+  });
+</script>
+<script>
+  const v = Date.now();
+  for (const src of ['chrome-shim.js', '../../src/protect.js', '../../src/diff.js', '../../src/names.js', '../../src/field.js', '../../src/tr-names.js', '../../src/slang.js', '../../flags.js', '../../src/content.js']) {
+    document.write('<script src="' + src + '?v=' + v + '"><\/script>');
+  }
+  document.write('<link rel="stylesheet" href="../../src/content.css?v=' + v + '">');
+</script>
+</body>
+</html>
