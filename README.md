@@ -19,10 +19,14 @@ receive.
 
 ## Translation engines
 
-- **What you send** is translated with Google first, because it reads most naturally. If Google is busy or
-  rate-limits the connection, Chrome's built-in on-device translator takes over at once.
-- **What you receive** is translated on the device (Chrome 138 and later): fast, no limits, and the text never
-  leaves the computer. Click a translated line to get Google's translation of that message instead.
+- **TypeKiwi's translation server** goes first in release builds: official DeepL (and Microsoft / Google Cloud
+  when configured) with TypeKiwi's own keys. It also reads the few chat lines before a message, so short and
+  casual lines come out right. Its address lives in `src/server-config.js`, which is empty in this public source.
+- **Without the server** (builds from source, or when it is busy): Google's web translator, then Chrome's built-in
+  on-device translator (Chrome 138 and later: no limits, the text never leaves the computer), then MyMemory.
+- **Chat shorthand** is handled before any engine: "ща", "tmm", "idk" are spelled out, and a message that is only
+  shorthand ("tşk", "ty") is answered with the other language's shorthand ("спс").
+- Click a translated incoming line to translate it again with the best engine available.
 - A language pack for the on-device translator is downloaded once per direction, on the first keystroke in a
   chat box or from the **Offline translation** row in the popup.
 

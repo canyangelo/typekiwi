@@ -185,12 +185,12 @@
   //            on-device as fallback when Google is busy. Few messages a day, so Google's limits are rarely hit.
   //  'networkOnly' for an explicit "better translation" request: no point answering with the on-device text again.
   // MyMemory comes last everywhere except 'networkOnly': its casual-chat answers are worse than the on-device model's.
-  const NETWORK_FIRST_TIMEOUT_MS = 4000;
-  async function translate(text, tl, hint, mode = 'local') {
-    if (mode !== 'local') {
-      const net = await translateNetwork(text, tl, NETWORK_FIRST_TIMEOUT_MS, mode === 'networkOnly' ? undefined : ['google']);
-      if (net.ok || mode === 'networkOnly') return net;
-    }
+  // TypeKiwi's own server (official DeepL / Microsoft / Google APIs) goes first for everything, incoming too.
+  const NETWORK_FIRST_TIMEOUT_MS = 5000;
+  async function translate(text, tl, hint, mode = 'local', context) {
+    const first = mode === 'local' ? ['server'] : mode === 'networkOnly' ? ['server', 'google', 'mymemory'] : ['server', 'google'];
+    const net1 = await translateNetwork(text, tl, NETWORK_FIRST_TIMEOUT_MS, first, context);
+    if (net1.ok || mode === 'networkOnly') return net1;
     const loc = await translateLocal(text, tl, hint);
     if (loc && loc.ok) return loc;
     const net = await translateNetwork(text, tl, TRANSLATE_TIMEOUT_MS, mode === 'local' ? undefined : ['mymemory']);
@@ -198,12 +198,12 @@
     return loc;   // "the language pack is on its way" says more than a network failure
   }
 
-  function translateNetwork(text, tl, timeoutMs = TRANSLATE_TIMEOUT_MS, engines) {
+  function translateNetwork(text, tl, timeoutMs = TRANSLATE_TIMEOUT_MS, engines, context) {
     return new Promise(resolve => {
       const timer = setTimeout(() => resolve({ ok: false, error: 'timeout' }), timeoutMs);
       const done = r => { clearTimeout(timer); resolve(r); };
       try {
-        chrome.runtime.sendMessage({ type: 'translate', text, tl, engines }, res => {
+        chrome.runtime.sendMessage({ type: 'translate', text, tl, engines, context }, res => {
           if (chrome.runtime.lastError || !res) done({ ok: false, error: chrome.runtime.lastError?.message || 'no response' });
           else done(res);
         });
@@ -233,13 +233,13 @@
     return [...(settings.keepList || []), ...learnedNames, ...names];
   }
 
-  async function translateProtected(text, tl, mode = 'local') {
+  async function translateProtected(text, tl, mode = 'local', context) {
     // Turkish personal names (necati, adım X, X abi…) are protected up front; Google wrote them in Cyrillic (Некати).
     const personNames = CC.findTurkishNames(text);
     // Chat abbreviations spelled out first ("ща" -> "сейчас"); the translator doesn't know them.
     // The slang list of the language the text is most likely in: the user's own for what they type, the other side's for replies.
     const masked = CC.protect(CC.expandSlang(text, hintFor(tl)), [...keepList(), ...personNames]);
-    const res = await translate(masked.text, tl, hintFor(tl), mode);
+    const res = await translate(masked.text, tl, hintFor(tl), mode, context);
     if (!res.ok) return res;
     let out = CC.restore(res.text, masked.parts);
     if (CYRILLIC.has(tl) && res.src !== tl) out = await fixNames(text, out, res.src);
@@ -520,7 +520,7 @@
     // not a translator's long form; everything else: what the other side reads, best quality.
     const short = CC.shortReply(next.source, settings.readLang, settings.targetLang);
     const res = short ? { ok: true, src: short.src, text: short.text, engine: 'shorthand' }
-      : await translateProtected(next.source, settings.targetLang, 'network');
+      : await translateProtected(next.source, settings.targetLang, 'network', chatContext(null));
     if (seq !== st.seq) return;          // a newer translation has started
     if (read(st) !== field) { st.inflight = false; return; } // user kept typing meanwhile; the timer will run again
 
@@ -820,17 +820,17 @@
     const body = document.createTextNode(' ' + translated);
     line.append(tag, body);
     line.title = 'Click for a better translation';
-    line.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); improve(line, body, text); });
+    line.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); improve(line, body, text, item); });
     textEl.after(line);
   }
 
   // A reader who finds an incoming translation odd clicks it: ask Google (the on-device model is weaker on short,
   // casual lines). Only on request, so incoming messages don't burn the online engines' limits.
-  async function improve(line, body, text) {
+  async function improve(line, body, text, item) {
     if (line.dataset.ccBusy || line.dataset.ccImproved) return;
     line.dataset.ccBusy = '1';
     line.classList.add('cc-improving');
-    const res = await translateProtected(text, settings.readLang, 'networkOnly');
+    const res = await translateProtected(text, settings.readLang, 'networkOnly', chatContext(item));
     delete line.dataset.ccBusy;
     line.classList.remove('cc-improving');
     if (res.ok && res.src !== settings.readLang && res.text.trim()) {
@@ -841,6 +841,21 @@
     } else {
       line.title = 'The online translator is busy right now; try again in a few minutes';
     }
+  }
+
+  // Earlier lines of this chat, sent along for meaning only: up to 4 before `item`, or the last 4 when item is null
+  // (what the user is typing answers those). Only on the chat sites TypeKiwi knows.
+  function chatContext(item) {
+    if (!adapter) return undefined;
+    const all = [...adapter.items()];
+    const end = item ? all.indexOf(item) : all.length;
+    const out = [];
+    for (let i = end - 1; i >= 0 && out.length < 4; i--) {
+      const el = adapter.textEl(all[i]);
+      const text = el ? textOf(el) : '';
+      if (text) out.unshift({ me: !!adapter.skip(all[i]), text });
+    }
+    return out;
   }
 
   // Flag of the reading language (SVG from flags.js). Windows doesn't render flag emoji (shows the letters "TR").
@@ -927,7 +942,7 @@
       activeJobs++;
       // Short replies ("ща", "заходи") are where the on-device model is weakest: Google first for those.
       const mode = job.text.length <= SHORT_INCOMING ? 'network' : 'local';
-      translateProtected(job.text, settings.readLang, mode).then(res => {
+      translateProtected(job.text, settings.readLang, mode, chatContext(job.item)).then(res => {
         activeJobs--;
         const ok = res.ok && res.src !== settings.readLang && res.text.trim() && res.text.trim() !== job.text;
         if (res.ok) {

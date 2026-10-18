@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TypeKiwi",
-  "version": "0.9.1",
+  "version": "0.10.1",
   "description": "Write in your language, send in theirs: live translation for any chat box, with translations under incoming messages.",
   "permissions": [
     "storage",
@@ -9,7 +9,8 @@
   ],
   "host_permissions": [
     "https://translate.googleapis.com/*",
-    "https://api.mymemory.translated.net/*"
+    "https://api.mymemory.translated.net/*",
+    "https://*.workers.dev/*"
   ],
   "background": {
     "service_worker": "src/background.js"
