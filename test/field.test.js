@@ -163,3 +163,16 @@ test('pickSource keeps a clear detection over the hint', () => {
   assert.strictEqual(pickSource([{ detectedLanguage: 'en', confidence: 0.95 }, { detectedLanguage: 'ru', confidence: 0.03 }], 'ru'), 'en');
   assert.strictEqual(pickSource([{ detectedLanguage: 'tr', confidence: 0.75 }, { detectedLanguage: 'ru', confidence: 0.2 }], 'ru'), 'tr');
 });
+
+test('pickSource: Cyrillic letters overrule the detector (Russian is never Ukrainian without і/ї/є/ґ)', () => {
+  const ru = 'Еще раз простите за долгое ожидание';
+  assert.strictEqual(pickSource([{ detectedLanguage: 'uk', confidence: 0.7 }], 'en', ru), 'ru');
+  assert.strictEqual(pickSource([{ detectedLanguage: 'uk', confidence: 0.6 }, { detectedLanguage: 'ru', confidence: 0.2 }], 'tr', ru), 'ru');
+  assert.strictEqual(pickSource([{ detectedLanguage: 'be', confidence: 0.6 }], 'ru', 'выдаю?'), 'ru');
+  assert.strictEqual(pickSource([{ detectedLanguage: 'ru', confidence: 0.6 }], 'ru', 'Дякую, все добре'), 'uk');
+  assert.strictEqual(pickSource([{ detectedLanguage: 'ru', confidence: 0.6 }], 'ru', 'Привіт, як справи'), 'uk');
+  assert.strictEqual(pickSource([{ detectedLanguage: 'ru', confidence: 0.6 }], 'ru', 'Рахмет, бәрі жақсы'), 'kk');
+  assert.strictEqual(pickSource([{ detectedLanguage: 'bg', confidence: 0.8 }], 'ru', 'Благодаря, всичко е наред'), 'bg');   // no Russian-only letters: the detector decides
+  assert.strictEqual(pickSource([{ detectedLanguage: 'bg', confidence: 0.8 }], 'ru', 'Мы были там'), 'ru');                   // ы is never Bulgarian
+  assert.strictEqual(pickSource([{ detectedLanguage: 'en', confidence: 0.9 }], 'ru', 'thanks koryangelo'), 'en');              // Latin text: no rule
+});

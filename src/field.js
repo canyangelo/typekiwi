@@ -69,7 +69,50 @@
   // top score, it wins.
   const MIN_CONFIDENCE = 0.5;
   const HINT_MIN = 0.2;
-  function pickSource(detections, hint) {
+  //
+  // Cyrillic languages are also told apart by their letters, which beats the detector on short chat lines:
+  // "Еще раз простите за долгое ожидание" was taken for Ukrainian ("прості" = simple) and came out as
+  // "Here are the simple ones for the longest". Ukrainian always has і/ї/є/ґ somewhere in a sentence, Russian never.
+  const CYRILLIC_LANGS = new Set(['ru', 'uk', 'be', 'bg', 'sr', 'mk', 'kk', 'ky', 'tg', 'mn']);
+  // Everyday Ukrainian words without і/ї/є/ґ that Russian doesn't have.
+  const UK_WORDS = new Set(['дякую', 'дяк', 'що', 'добре', 'ласка', 'зараз', 'чому', 'якщо', 'вже', 'дуже', 'гаразд',
+    'чекаю', 'бажаю', 'звичайно', 'тобто', 'ще', 'немає', 'вибач', 'вибачте', 'перепрошую', 'хлопці']);   // not "шо", "нема", "будь", "прошу": Russian chat uses them too
+  function letterRule(text) {
+    const t = String(text || '').toLowerCase().replace(/https?:\/\/\S+/g, '');
+    const cyr = (t.match(/[Ѐ-ӿ]/g) || []).length;
+    const lat = (t.match(/[a-z]/g) || []).length;
+    if (cyr < 2 || cyr < lat) return null;          // mostly Latin (a name, a link): no rule
+    const has = re => re.test(t);
+    if (has(/[әғқңөұүһ]/)) return { only: 'kk' };
+    if (has(/[ђјљњћџ]/)) return { only: 'sr' };
+    if (has(/[ѓќѕ]/)) return { only: 'mk' };
+    if (has(/ў/)) return { only: 'be' };
+    if (has(/[їєґ]/)) return { only: 'uk' };
+    const words = t.match(/[Ѐ-ӿ]+/g) || [];
+    if (words.some(w => UK_WORDS.has(w))) return { only: 'uk' };
+    const not = new Set();
+    if (has(/і/)) not.add('ru');
+    // A short Ukrainian line can lack і ("Дякую, все добре"); from four words on it practically never does.
+    else if (words.length >= 4 || has(/[ыэёъ]/)) { not.add('uk'); not.add('be'); }
+    if (has(/[ыэё]/)) { not.add('uk'); not.add('bg'); not.add('sr'); not.add('mk'); }
+    return { not };
+  }
+
+  function pickSource(detections, hint, text) {
+    const rule = letterRule(text);
+    if (rule && rule.only) return rule.only;
+    if (rule) {
+      detections = (detections || []).filter(d => !rule.not.has(baseLang(d.detectedLanguage)));
+      const hintOk = !!hint && CYRILLIC_LANGS.has(baseLang(hint)) && !rule.not.has(baseLang(hint));
+      if (!detections.length || !CYRILLIC_LANGS.has(baseLang(detections[0].detectedLanguage))) {
+        // The detector's guesses are ruled out by the letters (or aren't Cyrillic at all): the chat's language if it
+        // fits, otherwise Russian, by far the most common Cyrillic chat language.
+        return hintOk ? baseLang(hint) : (rule.not.has('ru') ? 'uk' : 'ru');
+      }
+      // Text this Cyrillic is never the non-Cyrillic hint: the best remaining Cyrillic guess, or the hint among them.
+      const hinted = hintOk && detections.find(d => sameLang(d.detectedLanguage, hint));
+      return baseLang((hinted && hinted.confidence >= detections[0].confidence * 0.5 ? hinted : detections[0]).detectedLanguage);
+    }
     const top = detections && detections[0];
     const hinted = hint && (detections || []).find(d => sameLang(d.detectedLanguage, hint));
     if (top && hinted && hinted.confidence >= HINT_MIN && hinted.confidence >= top.confidence * 0.5) return baseLang(hint);

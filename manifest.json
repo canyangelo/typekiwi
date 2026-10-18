@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TypeKiwi",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "Write in your language, send in theirs: live translation for any chat box, with translations under incoming messages.",
   "permissions": [
     "storage",

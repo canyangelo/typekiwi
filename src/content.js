@@ -127,7 +127,7 @@
   async function translateLocal(text, tl, hint) {
     if (!hasLocal()) return null;
     const target = CC.chromeLang(tl);
-    const src = CC.pickSource(await detectLocal(text), hint && CC.chromeLang(hint));
+    const src = CC.pickSource(await detectLocal(text), hint && CC.chromeLang(hint), text);
     if (!src) return null;
     if (CC.sameLang(src, target)) return { ok: true, text, src: tl, engine: 'chrome' };
     const state = await pairState(src, target);
