@@ -85,15 +85,22 @@ async function mymemory(text, tl) {
   return { text: out, src, engine: 'mymemory' };
 }
 
-async function translate(text, tl) {
+const ENGINES = { google, mymemory };
+
+// engines: which online engines may answer, in order. The page asks for Google alone first and only falls back to
+// MyMemory after Chrome's on-device translator, because MyMemory's answers for casual chat are often nonsense
+// ("через меня заходите" -> "içimden gel", "всё" -> "hiçbirşey").
+async function translate(text, tl, engines = ['google', 'mymemory']) {
   const key = tl + '\n' + text;
   const c = await loadCache();
-  if (c.has(key)) return c.get(key);
+  const hit = c.get(key);
+  if (hit && engines.includes(hit.engine || 'google')) return hit;
 
   let out = null;
   let lastErr = null;
-  for (const [name, fn] of [['google', google], ['mymemory', mymemory]]) {
-    if (Date.now() < blockedUntil[name]) continue;
+  for (const name of engines) {
+    const fn = ENGINES[name];
+    if (!fn || Date.now() < blockedUntil[name]) continue;
     try {
       out = await fn(text, tl);
       if (name === 'google') googleFailures = 0;
@@ -121,7 +128,7 @@ async function translate(text, tl) {
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type !== 'translate') return false;
-  translate(String(msg.text || ''), String(msg.tl || 'ru'))
+  translate(String(msg.text || ''), String(msg.tl || 'ru'), Array.isArray(msg.engines) ? msg.engines.map(String) : undefined)
     .then(r => sendResponse({ ok: true, text: r.text, src: r.src, engine: r.engine }))
     .catch(e => sendResponse({ ok: false, error: String(e?.message || e) }));
   return true;

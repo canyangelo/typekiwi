@@ -105,6 +105,8 @@
       [new RegExp(W + '(с|со)\\s+др' + E, 'giu'), (m, s) => (s[0] === 'С' ? 'С' : 'с') + ' днём рождения'],
       [new RegExp(W + '(у\\s+(?:меня|тебя|него|неё|нее|нас|вас|них)|мой|моё|твой|его|её|ее|на|до|после|днюха)\\s+др' + E, 'giu'),
         (m, pre) => pre + ' день рождения'],
+      // "всё" alone closes a deal or a topic ("that's it / done"); translators read it as "everything" or "nothing".
+      [/^(\s*)(ну\s+)?вс[её](\s*[.!)]*\s*)$/iu, (m, a, nu, z) => a + (nu || '') + (/^В/.test(m.trim().replace(/^ну\s+/i, '')) ? 'Это всё' : 'это всё') + z],
     ],
   };
 

@@ -184,25 +184,26 @@
   //  'network' what the user sends, and "better translation" clicks: Google first because it reads more naturally,
   //            on-device as fallback when Google is busy. Few messages a day, so Google's limits are rarely hit.
   //  'networkOnly' for an explicit "better translation" request: no point answering with the on-device text again.
+  // MyMemory comes last everywhere except 'networkOnly': its casual-chat answers are worse than the on-device model's.
   const NETWORK_FIRST_TIMEOUT_MS = 4000;
   async function translate(text, tl, hint, mode = 'local') {
     if (mode !== 'local') {
-      const net = await translateNetwork(text, tl, NETWORK_FIRST_TIMEOUT_MS);
+      const net = await translateNetwork(text, tl, NETWORK_FIRST_TIMEOUT_MS, mode === 'networkOnly' ? undefined : ['google']);
       if (net.ok || mode === 'networkOnly') return net;
     }
     const loc = await translateLocal(text, tl, hint);
     if (loc && loc.ok) return loc;
-    const net = mode === 'local' ? await translateNetwork(text, tl) : { ok: false, error: 'rate-limited' };
+    const net = await translateNetwork(text, tl, TRANSLATE_TIMEOUT_MS, mode === 'local' ? undefined : ['mymemory']);
     if (net.ok || !loc) return net;
     return loc;   // "the language pack is on its way" says more than a network failure
   }
 
-  function translateNetwork(text, tl, timeoutMs = TRANSLATE_TIMEOUT_MS) {
+  function translateNetwork(text, tl, timeoutMs = TRANSLATE_TIMEOUT_MS, engines) {
     return new Promise(resolve => {
       const timer = setTimeout(() => resolve({ ok: false, error: 'timeout' }), timeoutMs);
       const done = r => { clearTimeout(timer); resolve(r); };
       try {
-        chrome.runtime.sendMessage({ type: 'translate', text, tl }, res => {
+        chrome.runtime.sendMessage({ type: 'translate', text, tl, engines }, res => {
           if (chrome.runtime.lastError || !res) done({ ok: false, error: chrome.runtime.lastError?.message || 'no response' });
           else done(res);
         });
@@ -515,7 +516,11 @@
     const seq = ++st.seq;
     st.inflight = true;
     badge(st, st.sendAfter ? 'Translating — Enter: send as is' : 'Translating…', 'busy');
-    const res = await translateProtected(next.source, settings.targetLang, 'network');   // what the other side reads: best quality
+    // A message that is only chat shorthand ("tşk", "eyv knk", "ty") gets the other language's shorthand ("спс бро"),
+    // not a translator's long form; everything else: what the other side reads, best quality.
+    const short = CC.shortReply(next.source, settings.readLang, settings.targetLang);
+    const res = short ? { ok: true, src: short.src, text: short.text, engine: 'shorthand' }
+      : await translateProtected(next.source, settings.targetLang, 'network');
     if (seq !== st.seq) return;          // a newer translation has started
     if (read(st) !== field) { st.inflight = false; return; } // user kept typing meanwhile; the timer will run again
 

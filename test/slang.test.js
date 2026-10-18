@@ -83,6 +83,13 @@ test('"др" is read from its context: friend request vs birthday, otherwise lef
   assert.strictEqual(expandSlang('кадр', 'ru'), 'кадр');                             // inside a word
 });
 
+test('"всё" alone means "that\'s it", inside a sentence it is left alone', () => {
+  assert.strictEqual(expandSlang('всё', 'ru'), 'это всё');
+  assert.strictEqual(expandSlang('Всё!', 'ru'), 'Это всё!');
+  assert.strictEqual(expandSlang('ну всё', 'ru'), 'ну это всё');
+  assert.strictEqual(expandSlang('всё норм', 'ru'), 'всё нормально');
+});
+
 test('Arabic spelling variants', () => {
   assert.strictEqual(expandSlang('انشالله', 'ar'), 'إن شاء الله');
   assert.strictEqual(expandSlang('مشالله', 'ar'), 'ما شاء الله');

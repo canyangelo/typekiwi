@@ -52,7 +52,7 @@
   window.__ccFunpay = true; // make the content script treat this page as FunPay
   // Each script is loaded in order with a timestamp to bypass the cache.
   const v = Date.now();
-  for (const src of ['chrome-shim.js', '../../src/protect.js', '../../src/diff.js', '../../src/names.js', '../../src/field.js', '../../src/tr-names.js', '../../src/slang.js', '../../flags.js', '../../src/content.js']) {
+  for (const src of ['chrome-shim.js', '../../src/protect.js', '../../src/diff.js', '../../src/names.js', '../../src/field.js', '../../src/tr-names.js', '../../src/slang.js', '../../src/short.js', '../../flags.js', '../../src/content.js']) {
     document.write('<script src="' + src + '?v=' + v + '"><\/script>');
   }
   document.write('<link rel="stylesheet" href="../../src/content.css?v=' + v + '">');
