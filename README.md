@@ -25,6 +25,11 @@ receive.
   leaves the computer. Click a translated line to get Google's translation of that message instead.
 - A language pack for the on-device translator is downloaded once per direction, on the first keystroke in a
   chat box or from the **Offline translation** row in the popup.
+- **Gemini (optional, best quality).** Paste your own Gemini API key in the popup (free at
+  [aistudio.google.com/apikey](https://aistudio.google.com/apikey)) and Gemini translates first, everything: it
+  understands slang, typos and the few messages before the one it translates. The newest Flash model is used for what
+  you send, Flash-Lite for incoming messages; when a model's free quota runs out, the others take over. The key is kept
+  only on your computer. With a key, your messages are sent to Google's Gemini API.
 
 ## Install (development build)
 

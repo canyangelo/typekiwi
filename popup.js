@@ -203,6 +203,44 @@ $('offlineBtn').addEventListener('click', async () => {
   checkOffline();
 });
 
+// Gemini key: checked by the background against Google's model list, kept only on this computer (storage.local).
+// The key itself is never shown again after saving, only its last four characters.
+function showGemini() {
+  chrome.storage.local.get({ geminiKey: '', geminiModels: null, geminiStatus: '' }, s => {
+    const state = $('geminiState'), input = $('geminiKey'), btn = $('geminiBtn');
+    const on = !!s.geminiKey;
+    state.className = 'state ' + (on ? (s.geminiStatus === 'bad-key' ? 'bad' : 'on') : '');
+    state.textContent = !on ? '' : s.geminiStatus === 'bad-key' ? '· key not accepted' : '· on (' + (s.geminiModels?.flash || 'Gemini') + ')';
+    input.hidden = on;
+    input.value = '';
+    btn.textContent = on ? 'Remove key ••' + s.geminiKey.slice(-4) : 'Save';
+    btn.disabled = false;
+  });
+}
+
+$('geminiBtn').addEventListener('click', () => {
+  const btn = $('geminiBtn'), input = $('geminiKey');
+  const key = input.hidden ? '' : input.value.trim();
+  if (!input.hidden && !key) { input.focus(); return; }
+  btn.disabled = true;
+  btn.textContent = key ? 'Checking…' : 'Removing…';
+  chrome.runtime.sendMessage({ type: 'gemini-key', key }, res => {
+    if (chrome.runtime.lastError || !res?.ok) {
+      const err = res?.error || chrome.runtime.lastError?.message || '';
+      $('geminiState').className = 'state bad';
+      $('geminiState').textContent = err === 'bad-key' ? '· key not accepted' : err === 'no-model' ? '· no Gemini Flash model for this key'
+        : '· couldn\'t reach Gemini, try again';
+      btn.disabled = false;
+      btn.textContent = 'Save';
+      return;
+    }
+    flash();
+    showGemini();
+  });
+});
+$('geminiKey').addEventListener('keydown', e => { if (e.key === 'Enter') $('geminiBtn').click(); });
+showGemini();
+
 chrome.storage.sync.get(DEFAULTS, s => {
   setupSite(s.offSites);
   $('enabled').checked = s.enabled;

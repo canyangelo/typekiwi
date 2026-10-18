@@ -32,7 +32,14 @@ redistribute it. See LICENSE.
 def referenced_files() -> list[str]:
     m = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
     files = {"manifest.json", "LICENSE"}
-    files.add(m["background"]["service_worker"])
+    worker = m["background"]["service_worker"]
+    files.add(worker)
+    # Files the service worker loads itself (importScripts resolves next to the worker): a missing one stops the
+    # whole background, so every online translation fails.
+    worker_src = (ROOT / worker).read_text(encoding="utf-8")
+    for call in re.findall(r"importScripts\(([^)]*)\)", worker_src):
+        for a, b in re.findall(r"'([^']+)'|\"([^\"]+)\"", call):
+            files.add((Path(worker).parent / (a or b)).as_posix())
     files.add(m["action"]["default_popup"])
     files.update(m.get("icons", {}).values())
     files.update(m["action"].get("default_icon", {}).values())
