@@ -193,23 +193,6 @@
   }
   .names textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
   .hint { color: var(--muted); font-size: 11px; margin: 5px 2px 0; }
-  .hint a { color: var(--accent); }
-  .keyrow { display: flex; gap: 6px; align-items: center; }
-  .keyrow input {
-    flex: 1;
-    min-width: 0;
-    padding: 7px 10px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--card);
-    color: var(--ink);
-    font: inherit;
-    font-size: 12.5px;
-  }
-  .keyrow input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
-  .state { font-weight: 600; font-size: 11px; margin-left: 4px; }
-  .state.on { color: var(--accent); }
-  .state.bad { color: var(--coral); }
   .learned { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin: 8px 2px 0; }
   .chip { background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 2px 9px; font-size: 11.5px; font-weight: 500; }
   .learned button {
@@ -288,17 +271,6 @@
     <label>Offline translation<span class="sub" id="offlineSub"></span></label>
     <button type="button" class="pack" id="offlineBtn" hidden>Download</button>
   </div>
-</section>
-
-<section class="names ai">
-  <label for="geminiKey">Better translation with Gemini <span class="state" id="geminiState"></span></label>
-  <div class="keyrow">
-    <input type="password" id="geminiKey" placeholder="Paste your Gemini API key" autocomplete="off" spellcheck="false">
-    <button type="button" class="pack" id="geminiBtn">Save</button>
-  </div>
-  <div class="hint" id="geminiHint">Understands slang and the chat around a message. Free key at
-    <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>;
-    your messages are then sent to Google Gemini with it.</div>
 </section>
 
 <section class="names">

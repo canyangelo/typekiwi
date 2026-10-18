@@ -9,20 +9,6 @@
       sync: { _d: {}, get(d, cb) { cb(Object.assign({}, d, this._d)); }, set(o, cb) { Object.assign(this._d, o); cb && cb(); } },
       local: { _d: { learnedNames: ['koryangelo', 'tekrocan'] }, get(d, cb) { cb(Object.assign({}, d, this._d)); }, set(o, cb) { Object.assign(this._d, o); cb && cb(); } },
     },
-    // Gemini key check: a key starting with "test-ok" is accepted, anything else is refused.
-    runtime: {
-      lastError: undefined,
-      sendMessage(msg, cb) {
-        const local = window.chrome.storage.local;
-        setTimeout(() => {
-          if (msg.type !== 'gemini-key') return cb && cb();
-          if (!msg.key) { delete local._d.geminiKey; local._d.geminiOn = false; return cb({ ok: true, off: true }); }
-          if (!msg.key.startsWith('test-ok')) return cb({ ok: false, error: 'bad-key' });
-          Object.assign(local._d, { geminiKey: msg.key, geminiModels: { flash: 'gemini-3.8-flash', lite: 'gemini-3.5-flash-lite' }, geminiStatus: 'ok', geminiOn: true });
-          cb({ ok: true, model: 'gemini-3.8-flash' });
-        }, 300);
-      },
-    },
   };
   fetch('../../popup.html?v=' + Date.now()).then(r => r.text()).then(html => {
     html = html.replace('src="icons/', 'src="../../icons/').replace('src="src/field.js"', 'src="../../src/field.js"').replace('src="flags.js"', 'src="../../flags.js?v=' + Date.now() + '"').replace('src="popup.js"', 'src="../../popup.js?v=' + Date.now() + '"');
