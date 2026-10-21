@@ -94,10 +94,33 @@
   // the word is left as it is: a wrong guess ("send a birthday") is worse than none.
   const W = '(?<![\\p{L}\\p{N}])';   // word start for any script (\b only knows Latin)
   const E = '(?![\\p{L}\\p{N}])';    // word end
+  //
+  // "кинуть" is both "to send" and slang for "to scam": a lone "кинул" after "add me" came out as "dolandırdı"
+  // (scammed). It is read as "sent" when it has something sent after it (др, заявку, ссылку…) or stands alone with
+  // only filler words ("уже кинул", "кинул тебе)"). With a victim ("меня кинули", "кинул меня") it stays as written.
+  const SEND = {
+    'кинь': 'отправь', 'кинь-ка': 'отправь', 'скинь': 'отправь', 'кидай': 'отправляй', 'скидывай': 'отправляй',
+    'кинуть': 'отправить', 'скинуть': 'отправить', 'кинешь': 'отправишь', 'скинешь': 'отправишь', 'кину': 'отправлю',
+    'скину': 'отправлю', 'кинул': 'отправил', 'скинул': 'отправил', 'кинула': 'отправила', 'скинула': 'отправила',
+    'кинули': 'отправили', 'скинули': 'отправили',
+  };
+  const SEND_VERBS = Object.keys(SEND).join('|');
+  const sendVerb = verb => {
+    const to = SEND[verb.toLowerCase()];
+    if (!to) return verb;
+    return verb[0] !== verb[0].toLowerCase() ? to[0].toUpperCase() + to.slice(1) : to;
+  };
+  const SENT_THINGS = 'заявку|заявочку|запрос|инвайт|инв|приглашение|приглос|ссылку|ссылочку|трейд|обмен|скрин|скриншот|' +
+    'аккаунт|акк|данные|код|почту|логин|пароль|ник|предмет|предметы|айди|id';
+  const FILLER = '(?:я|уже|ну|вот|всё|все|ок|да|только\\s+что|тебе|вам|те)';
   const PHRASES = {
     ru: [
-      [new RegExp(W + '(кинь|кинь-ка|скинь|кидай|кинуть|скинуть|кинешь|скинешь|отправь|отправить|отправлю|кину|скину|прими|принять|прийми|прими-ка)\\s+(в\\s+)?др' + E, 'giu'),
-        (m, verb) => verb + ' запрос в друзья'],
+      [new RegExp(W + '(' + SEND_VERBS + '|отправь|отправить|отправлю|отправил|отправила|прими|принять|прийми|прими-ка)\\s+(тебе\\s+|вам\\s+)?(в\\s+)?др' + E, 'giu'),
+        (m, verb, who) => sendVerb(verb) + ' ' + (who || '') + 'запрос в друзья'],
+      [new RegExp(W + '(' + SEND_VERBS + ')(\\s+(?:тебе|вам|те)\\s+|\\s+)(' + SENT_THINGS + ')' + E, 'giu'),
+        (m, verb, gap, thing) => sendVerb(verb) + gap + thing],
+      [new RegExp('^(\\s*(?:' + FILLER + '[\\s,]+)*)(' + SEND_VERBS + ')((?:[\\s,]+' + FILLER + ')*\\s*[.!?)(]*\\s*)$', 'iu'),
+        (m, pre, verb, post) => pre + sendVerb(verb) + post],
       [new RegExp(W + '(добавь|добавить|добавлю|добавил|добавила|добавишь|кинь|скинь)\\s+(меня\\s+|тебя\\s+)?в\\s+др' + E, 'giu'),
         (m, verb, who) => verb + ' ' + (who || '') + 'в друзья'],
       [new RegExp(W + 'в\\s+др' + E, 'giu'), 'в друзья'],

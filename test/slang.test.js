@@ -71,8 +71,8 @@ test('English chat abbreviations work alongside any language, the chat language 
 });
 
 test('"др" is read from its context: friend request vs birthday, otherwise left alone', () => {
-  assert.strictEqual(expandSlang('Кинь др и заходи на меня'), 'Кинь запрос в друзья и заходи на меня');
-  assert.strictEqual(expandSlang('скинь в др', 'ru'), 'скинь запрос в друзья');
+  assert.strictEqual(expandSlang('Кинь др и заходи на меня'), 'Отправь запрос в друзья и заходи на меня');
+  assert.strictEqual(expandSlang('скинь в др', 'ru'), 'отправь запрос в друзья');
   assert.strictEqual(expandSlang('прими др плз', 'tr'), 'прими запрос в друзья пожалуйста');
   assert.strictEqual(expandSlang('добавь меня в др', 'ru'), 'добавь меня в друзья');
   assert.strictEqual(expandSlang('удалил из др', 'ru'), 'удалил из друзей');
@@ -88,6 +88,22 @@ test('"всё" alone means "that\'s it", inside a sentence it is left alone', ()
   assert.strictEqual(expandSlang('Всё!', 'ru'), 'Это всё!');
   assert.strictEqual(expandSlang('ну всё', 'ru'), 'ну это всё');
   assert.strictEqual(expandSlang('всё норм', 'ru'), 'всё нормально');
+});
+
+test('"кинул" is "sent" when something was sent or it stands alone, "scammed" only with a victim', () => {
+  assert.strictEqual(expandSlang('кинул', 'ru'), 'отправил');
+  assert.strictEqual(expandSlang('Кинул)', 'ru'), 'Отправил)');
+  assert.strictEqual(expandSlang('уже кинул', 'ru'), 'уже отправил');
+  assert.strictEqual(expandSlang('я кинул тебе', 'ru'), 'я отправил тебе');
+  assert.strictEqual(expandSlang('кинул?', 'ru'), 'отправил?');
+  assert.strictEqual(expandSlang('скинула заявку', 'ru'), 'отправила заявку');
+  assert.strictEqual(expandSlang('кинул тебе ссылку, проверь', 'ru'), 'отправил тебе ссылку, проверь');
+  assert.strictEqual(expandSlang('скинул др', 'ru'), 'отправил запрос в друзья');
+  assert.strictEqual(expandSlang('кинул', 'tr'), 'отправил');                         // Cyrillic in any chat
+  assert.strictEqual(expandSlang('меня кинули', 'ru'), 'меня кинули');                // scammed: left alone
+  assert.strictEqual(expandSlang('он меня кинул', 'ru'), 'он меня кинул');
+  assert.strictEqual(expandSlang('кинул меня на деньги', 'ru'), 'кинул меня на деньги');
+  assert.strictEqual(expandSlang('кинул мяч', 'ru'), 'кинул мяч');                    // threw a ball: not chat sending
 });
 
 test('Arabic spelling variants', () => {
